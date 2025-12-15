@@ -35,7 +35,7 @@
   ],
   "pages": [
     {"name": "ConfigCenter.js"},
-    {"name": "CrmCustomer.js"},
+    {"name": "CrmCustomers.js"},
     {"name": "CustomerDetail.js"},
     {"name": "MyTeam.js"},
     {"name": "Profile.js"},
