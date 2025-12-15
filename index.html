@@ -43,13 +43,21 @@
         <p class="loading-text" id="loadingText">Loading APP...</p>
         <p class="loading-error" id="loadingError">Load failed, check console</p>
     </div>
-    <div id="app-content"></div>
+    <div id="app-content">
+        <!-- Fallback content if initApp not exists -->
+        <div id="fallback-content" style="display: none; width: 100%; height: 100vh; flex-direction: column; align-items: center; justify-content: center; text-align: center;">
+            <h1>✅ APP Loaded Successfully</h1>
+            <p>All core modules are loaded. Define window.initApp() to render content.</p>
+        </div>
+    </div>
 
     <script>
+        // Configuration: GitHub Pages base URL
         const CONFIG = {
             BASE_URL: "https://maojianying2025.github.io/MyAppWeb"
         };
 
+        // Load file with cache busting
         async function loadFile(path) {
             const cacheBuster = `?v=${Date.now()}`;
             const url = `${CONFIG.BASE_URL}/${path}${cacheBuster}`;
@@ -61,14 +69,27 @@
             return res.text();
         }
 
-        async function loadJS(path) {
-            const jsCode = await loadFile(path);
-            const script = document.createElement('script');
-            script.textContent = jsCode;
-            document.body.appendChild(script);
-            console.log("✅ JS loaded successfully: ", path);
+        // Load JavaScript file (global mount mode)
+        async function loadJS(path, globalName = null) {
+            try {
+                const jsCode = await loadFile(path);
+                // Mount to window if globalName is provided
+                if (globalName) {
+                    window[globalName] = eval(jsCode);
+                    console.log(`✅ JS mounted to global: window.${globalName} (${path})`);
+                } else {
+                    const script = document.createElement('script');
+                    script.textContent = jsCode;
+                    document.body.appendChild(script);
+                    console.log("✅ JS loaded successfully: ", path);
+                }
+            } catch (err) {
+                console.error("❌ Failed to load JS: ", path, err);
+                throw err;
+            }
         }
 
+        // Load CSS file (reserved for future use)
         async function loadCSS(path) {
             const cssCode = await loadFile(path);
             const style = document.createElement('style');
@@ -77,30 +98,44 @@
             console.log("✅ CSS loaded successfully: ", path);
         }
 
+        // Core APP loading logic
         async function loadApp() {
             const loadingText = document.getElementById("loadingText");
             const loadingError = document.getElementById("loadingError");
+            const fallbackContent = document.getElementById("fallback-content");
             
             try {
-                // 1. 加载配置文件（根目录）
+                // Step 1: Preload core entities (mount to window)
+                loadingText.textContent = "Loading core modules...";
+                const coreEntities = [
+                    { path: "MyAPP/entities/Customer.js", globalName: "Customer" },
+                    { path: "MyAPP/entities/ICCID.js", globalName: "ICCID" },
+                    { path: "MyAPP/entities/Organization.js", globalName: "Organization" },
+                    { path: "MyAPP/entities/Permission.js", globalName: "Permission" },
+                    { path: "MyAPP/entities/Program.js", globalName: "Program" },
+                    { path: "MyAPP/entities/Region.js", globalName: "Region" },
+                    { path: "MyAPP/entities/Role.js", globalName: "Role" },
+                    { path: "MyAPP/entities/SalesSchedule.js", globalName: "SalesSchedule" },
+                    { path: "MyAPP/entities/Task.js", globalName: "Task" },
+                    { path: "MyAPP/entities/TPA.js", globalName: "TPA" },
+                    { path: "MyAPP/entities/TPABilling.js", globalName: "TPABilling" }
+                ];
+                // Load all core entities and mount to window
+                for (const item of coreEntities) {
+                    await loadJS(item.path, item.globalName);
+                }
+
+                // Step 2: Load configuration file
                 loadingText.textContent = "Loading configuration file...";
                 const configText = await loadFile("loadConfig.json");
                 const loadConfig = JSON.parse(configText);
 
-                // 2. 加载entities（无副标题录）
-                loadingText.textContent = "Loading core logic...";
-                if (loadConfig.entities) {
-                    for (const item of loadConfig.entities) {
-                        await loadJS(`MyAPP/entities/${item.name}`);
-                    }
-                }
-
-                // 3. 加载components（区分子目录：config/crm/dashboard/tpa）
+                // Step 3: Load components (with subdirectories)
                 loadingText.textContent = "Loading component resources...";
                 if (loadConfig.components) {
                     for (const item of loadConfig.components) {
                         let componentPath = "";
-                        // 根据文件名匹配子目录
+                        // Match component subdirectories
                         if (["CompactFlowConfig.js", "CompactTaskConfig.js", "FlowConfiguration.js", "ICCIDManager.js", "ModuleLibrary.js", "OrganizationManager.js", "ProgramManager.js", "RegionManager.js", "RoleManager.js", "RolePermissionManager.js", "TaskConfiguration.js", "UserPermissionManager.js"].includes(item.name)) {
                             componentPath = `MyAPP/components/config/${item.name}`;
                         } else if (["BulkEditCustomersModal.js", "CreateCustomerModal.js", "ExportCustomersModal.js", "ImportCustomersModal.js"].includes(item.name)) {
@@ -117,23 +152,36 @@
                     }
                 }
 
-                // 4. 加载pages（无副标题录）
+                // Step 4: Load pages (with correct filename)
                 loadingText.textContent = "Loading page content...";
                 if (loadConfig.pages) {
                     for (const item of loadConfig.pages) {
-                        await loadJS(`MyAPP/pages/${item.name}`);
+                        let pagePath = `MyAPP/pages/${item.name}`;
+                        // Fix CrmCustomer.js -> CrmCustomers.js
+                        if (item.name === "CrmCustomer.js") {
+                            pagePath = `MyAPP/pages/CrmCustomers.js`;
+                        }
+                        await loadJS(pagePath);
                     }
                 }
 
-                // 5. 启动成功
+                // Step 5: Complete loading & render content
                 loadingText.textContent = "Startup successful!";
                 setTimeout(() => {
                     document.getElementById("loadingBox").style.display = "none";
-                    document.getElementById("app-content").style.display = "block";
-                    if (window.initApp) window.initApp();
+                    const appContent = document.getElementById("app-content");
+                    appContent.style.display = "flex";
+                    
+                    // Trigger initApp if exists, else show fallback content
+                    if (window.initApp) {
+                        window.initApp();
+                    } else {
+                        fallbackContent.style.display = "flex";
+                    }
                 }, 800);
 
             } catch (err) {
+                // Error handling
                 console.error("❌ Load failure details: ", err.stack);
                 loadingText.style.display = "none";
                 loadingError.style.display = "block";
@@ -141,7 +189,10 @@
             }
         }
 
+        // Initialize APP when page loads
         window.addEventListener("DOMContentLoaded", loadApp);
+        
+        // Retry on error click
         document.getElementById("loadingError").addEventListener("click", () => {
             document.getElementById("loadingError").style.display = "none";
             document.getElementById("loadingText").style.display = "block";
