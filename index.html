@@ -1,11 +1,11 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no,viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black">
-    <title>我的APP（网页版）</title>
+    <title>My APP (Web Version)</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: sans-serif; }
         body { background: #f5f5f5; min-height: 100vh; }
@@ -40,88 +40,120 @@
 <body>
     <div class="loading-container" id="loadingBox">
         <div class="loading-spinner"></div>
-        <p class="loading-text" id="loadingText">正在加载APP...</p>
-        <p class="loading-error" id="loadingError">加载失败，请检查控制台</p>
+        <p class="loading-text" id="loadingText">Loading APP...</p>
+        <p class="loading-error" id="loadingError">Load failed, check console</p>
     </div>
     <div id="app-content"></div>
 
     <script>
-        // 配置：GitHub仓库的基础URL
+        // Configuration: GitHub Pages base URL (DO NOT add trailing slash)
         const CONFIG = {
-            BASE_URL: "https://maojianying2025.github.io/MyAppWeb" // 替换为你的GitHub Pages链接
+            BASE_URL: "https://maojianying2025.github.io/MyAppWeb" // Replace with your actual GitHub Pages URL
         };
 
-        // 加载文件（直接从GitHub仓库加载，无跨域问题）
+        // Load file from GitHub repository (no CORS issues)
         async function loadFile(path) {
             const url = `${CONFIG.BASE_URL}/${path}`;
             const res = await fetch(url);
+            
             if (!res.ok) {
-                throw new Error(`文件加载失败：${res.status}（URL：${url}）`);
+                throw new Error(`File load failed: ${res.status} (URL: ${url})`);
             }
             return res.text();
         }
 
+        // Load JavaScript file
         async function loadJS(path) {
             const jsCode = await loadFile(path);
             const script = document.createElement('script');
             script.textContent = jsCode;
             document.body.appendChild(script);
-            console.log("✅ JS加载完成：", path);
+            console.log("✅ JS loaded successfully: ", path);
         }
 
+        // Load CSS file (reserved for future use)
         async function loadCSS(path) {
             const cssCode = await loadFile(path);
             const style = document.createElement('style');
             style.textContent = cssCode;
             document.head.appendChild(style);
-            console.log("✅ CSS加载完成：", path);
+            console.log("✅ CSS loaded successfully: ", path);
         }
 
+        // Core APP loading logic
         async function loadApp() {
             const loadingText = document.getElementById("loadingText");
             const loadingError = document.getElementById("loadingError");
             
             try {
-                loadingText.textContent = "加载配置文件...";
-                const configText = await loadFile("loadConfig.json");
+                // Step 1: Load configuration file
+                loadingText.textContent = "Loading configuration file...";
+                const configText = await loadFile("MyAPP/loadConfig.json"); // Add MyAPP prefix
                 const loadConfig = JSON.parse(configText);
 
-                loadingText.textContent = "加载核心逻辑...";
-                for (const item of loadConfig.entities || []) {
-                    await loadJS(`entities/${item.name}`);
+                // Step 2: Load core business logic (entities)
+                loadingText.textContent = "Loading core logic...";
+                if (loadConfig.entities && loadConfig.entities.length > 0) {
+                    for (const item of loadConfig.entities) {
+                        await loadJS(`MyAPP/entities/${item.name}`); // Add MyAPP prefix
+                    }
                 }
 
-                loadingText.textContent = "加载组件资源...";
-                for (const item of loadConfig.components || []) {
-                    await loadJS(`components/${item.name}`);
+                // Step 3: Load component resources
+                loadingText.textContent = "Loading component resources...";
+                if (loadConfig.components && loadConfig.components.length > 0) {
+                    for (const item of loadConfig.components) {
+                        if (item.name.endsWith(".css")) {
+                            await loadCSS(`MyAPP/components/${item.name}`); // Add MyAPP prefix
+                        } else {
+                            await loadJS(`MyAPP/components/${item.name}`); // Add MyAPP prefix
+                        }
+                    }
                 }
 
-                loadingText.textContent = "加载页面内容...";
-                for (const item of loadConfig.pages || []) {
-                    await loadJS(`pages/${item.name}`);
+                // Step 4: Load page content
+                loadingText.textContent = "Loading page content...";
+                if (loadConfig.pages && loadConfig.pages.length > 0) {
+                    for (const item of loadConfig.pages) {
+                        if (item.name.endsWith(".css")) {
+                            await loadCSS(`MyAPP/pages/${item.name}`); // Add MyAPP prefix
+                        } else {
+                            await loadJS(`MyAPP/pages/${item.name}`); // Add MyAPP prefix
+                        }
+                    }
                 }
 
-                loadingText.textContent = "启动成功！";
+                // Step 5: Complete loading
+                loadingText.textContent = "Startup successful!";
                 setTimeout(() => {
                     document.getElementById("loadingBox").style.display = "none";
                     document.getElementById("app-content").style.display = "block";
-                    if (window.initApp) window.initApp();
+                    // Trigger APP initialization if exists
+                    if (window.initApp) {
+                        window.initApp();
+                    }
                 }, 800);
 
             } catch (err) {
-                console.error("❌ 加载失败详情：", err.stack);
+                // Error handling
+                console.error("❌ Load failure details: ", err.stack);
                 loadingText.style.display = "none";
                 loadingError.style.display = "block";
-                loadingError.textContent = `加载失败：${err.message}`;
+                loadingError.textContent = `Load failed: ${err.message}`;
             }
         }
 
-        window.addEventListener("DOMContentLoaded", loadApp);
-        document.getElementById("loadingError").addEventListener("click", () => {
-            document.getElementById("loadingError").style.display = "none";
-            document.getElementById("loadingText").style.display = "block";
-            document.getElementById("loadingText").textContent = "重新加载中...";
+        // Initialize APP when page loads
+        window.addEventListener("DOMContentLoaded", () => {
             loadApp();
+            
+            // Retry on error click
+            document.getElementById("loadingError").addEventListener("click", () => {
+                document.getElementById("loadingError").style.display = "none";
+                document.getElementById("loadingText").style.display = "block";
+                document.getElementById("loadingText").textContent = "Reloading...";
+                loadApp();
+            });
         });
     </script>
 </body>
