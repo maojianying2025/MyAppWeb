@@ -31,7 +31,7 @@
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         .loading-text { font-size: 16px; color: #333; }
         .loading-error { color: #dc3545; margin-top: 10px; display: none; }
-        #app-content { display: none; padding: 20px; }
+        #app-content { display: none; padding: 20px; width: 100%; height: 100vh; }
         @supports (-webkit-touch-callout: none) {
             .loading-container { padding-bottom: constant(safe-area-inset-bottom); }
         }
@@ -43,18 +43,13 @@
         <p class="loading-text" id="loadingText">Loading APP...</p>
         <p class="loading-error" id="loadingError">Load failed, check console</p>
     </div>
-    <div id="app-content">
-        <!-- Fallback content if initApp not exists -->
-        <div id="fallback-content" style="display: none; width: 100%; height: 100vh; flex-direction: column; align-items: center; justify-content: center; text-align: center;">
-            <h1>✅ APP Loaded Successfully</h1>
-            <p>All core modules are loaded. Define window.initApp() to render content.</p>
-        </div>
-    </div>
+    <div id="app-content"></div>
 
     <script>
-        // Configuration: GitHub Pages base URL
+        // Configuration: GitHub Pages base URL + Default page to open
         const CONFIG = {
-            BASE_URL: "https://maojianying2025.github.io/MyAppWeb"
+            BASE_URL: "https://maojianying2025.github.io/MyAppWeb",
+            DEFAULT_PAGE: "ConfigCenter.js" // 要默认打开的页面文件名
         };
 
         // Load file with cache busting
@@ -83,6 +78,7 @@
                     document.body.appendChild(script);
                     console.log("✅ JS loaded successfully: ", path);
                 }
+                return jsCode; // 返回代码，用于后续渲染
             } catch (err) {
                 console.error("❌ Failed to load JS: ", path, err);
                 throw err;
@@ -98,11 +94,45 @@
             console.log("✅ CSS loaded successfully: ", path);
         }
 
+        // Render specified page to app content
+        async function renderDefaultPage() {
+            const appContent = document.getElementById("app-content");
+            try {
+                // 1. 加载默认页面的JS代码
+                const pagePath = `MyAPP/pages/${CONFIG.DEFAULT_PAGE}`;
+                const pageCode = await loadJS(pagePath);
+                
+                // 2. 尝试执行页面渲染逻辑（适配两种常见场景）
+                // 场景1：页面代码有render()函数
+                if (window[CONFIG.DEFAULT_PAGE.replace(".js", "")]?.render) {
+                    appContent.innerHTML = window[CONFIG.DEFAULT_PAGE.replace(".js", "")].render();
+                } 
+                // 场景2：页面代码直接生成HTML内容（挂载到全局）
+                else if (window.pageContent) {
+                    appContent.innerHTML = window.pageContent;
+                } 
+                // 场景3：兜底 - 执行页面代码后自动渲染
+                else {
+                    eval(pageCode); // 执行页面代码
+                    // 若页面代码内有主动插入DOM的逻辑，会自动生效
+                }
+
+                console.log(`✅ Default page rendered: ${CONFIG.DEFAULT_PAGE}`);
+            } catch (err) {
+                appContent.innerHTML = `
+                    <div style="padding: 20px; text-align: center;">
+                        <h2>Failed to load default page: ${CONFIG.DEFAULT_PAGE}</h2>
+                        <p>Error: ${err.message}</p>
+                    </div>
+                `;
+                console.error("❌ Failed to render default page: ", err);
+            }
+        }
+
         // Core APP loading logic
         async function loadApp() {
             const loadingText = document.getElementById("loadingText");
             const loadingError = document.getElementById("loadingError");
-            const fallbackContent = document.getElementById("fallback-content");
             
             try {
                 // Step 1: Preload core entities (mount to window)
@@ -152,7 +182,7 @@
                     }
                 }
 
-                // Step 4: Load pages (with correct filename)
+                // Step 4: Load pages (including default page)
                 loadingText.textContent = "Loading page content...";
                 if (loadConfig.pages) {
                     for (const item of loadConfig.pages) {
@@ -165,18 +195,19 @@
                     }
                 }
 
-                // Step 5: Complete loading & render content
-                loadingText.textContent = "Startup successful!";
-                setTimeout(() => {
+                // Step 5: Complete loading & render default page
+                loadingText.textContent = "Starting APP...";
+                setTimeout(async () => {
                     document.getElementById("loadingBox").style.display = "none";
                     const appContent = document.getElementById("app-content");
-                    appContent.style.display = "flex";
+                    appContent.style.display = "block";
                     
-                    // Trigger initApp if exists, else show fallback content
+                    // 渲染默认页面
+                    await renderDefaultPage();
+
+                    // 触发initApp如果存在（兼容原有逻辑）
                     if (window.initApp) {
                         window.initApp();
-                    } else {
-                        fallbackContent.style.display = "flex";
                     }
                 }, 800);
 
