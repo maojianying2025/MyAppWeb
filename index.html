@@ -51,9 +51,11 @@
             BASE_URL: "https://maojianying2025.github.io/MyAppWeb" // Replace with your actual GitHub Pages URL
         };
 
-        // Load file from GitHub repository (no CORS issues)
+        // Load file from GitHub repository (no CORS issues) + cache busting
         async function loadFile(path) {
-            const url = `${CONFIG.BASE_URL}/${path}`;
+            // Add random parameter to avoid browser cache
+            const cacheBuster = `?v=${Date.now()}`;
+            const url = `${CONFIG.BASE_URL}/${path}${cacheBuster}`;
             const res = await fetch(url);
             
             if (!res.ok) {
@@ -86,39 +88,39 @@
             const loadingError = document.getElementById("loadingError");
             
             try {
-                // Step 1: Load configuration file
+                // Step 1: Load configuration file (ROOT directory)
                 loadingText.textContent = "Loading configuration file...";
-                const configText = await loadFile("loadConfig.json"); // Add MyAPP prefix
+                const configText = await loadFile("loadConfig.json");
                 const loadConfig = JSON.parse(configText);
 
-                // Step 2: Load core business logic (entities)
+                // Step 2: Load core business logic (entities) - MyAPP subfolder
                 loadingText.textContent = "Loading core logic...";
                 if (loadConfig.entities && loadConfig.entities.length > 0) {
                     for (const item of loadConfig.entities) {
-                        await loadJS(`MyAPP/entities/${item.name}`); // Add MyAPP prefix
+                        await loadJS(`MyAPP/entities/${item.name}`);
                     }
                 }
 
-                // Step 3: Load component resources
+                // Step 3: Load component resources - MyAPP subfolder
                 loadingText.textContent = "Loading component resources...";
                 if (loadConfig.components && loadConfig.components.length > 0) {
                     for (const item of loadConfig.components) {
                         if (item.name.endsWith(".css")) {
-                            await loadCSS(`MyAPP/components/${item.name}`); // Add MyAPP prefix
+                            await loadCSS(`MyAPP/components/${item.name}`);
                         } else {
-                            await loadJS(`MyAPP/components/${item.name}`); // Add MyAPP prefix
+                            await loadJS(`MyAPP/components/${item.name}`);
                         }
                     }
                 }
 
-                // Step 4: Load page content
+                // Step 4: Load page content - MyAPP subfolder
                 loadingText.textContent = "Loading page content...";
                 if (loadConfig.pages && loadConfig.pages.length > 0) {
                     for (const item of loadConfig.pages) {
                         if (item.name.endsWith(".css")) {
-                            await loadCSS(`MyAPP/pages/${item.name}`); // Add MyAPP prefix
+                            await loadCSS(`MyAPP/pages/${item.name}`);
                         } else {
-                            await loadJS(`MyAPP/pages/${item.name}`); // Add MyAPP prefix
+                            await loadJS(`MyAPP/pages/${item.name}`);
                         }
                     }
                 }
