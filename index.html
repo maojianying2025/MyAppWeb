@@ -9,6 +9,7 @@
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: sans-serif; }
         body { background: #f5f5f5; min-height: 100vh; }
+        /* 加载界面样式 */
         .loading-container {
             position: fixed;
             top: 0; left: 0;
@@ -31,108 +32,138 @@
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         .loading-text { font-size: 16px; color: #333; }
         .loading-error { color: #dc3545; margin-top: 10px; display: none; }
+        /* APP内容容器 */
         #app-content { display: none; padding: 20px; }
+        /* iOS适配 */
         @supports (-webkit-touch-callout: none) {
             .loading-container { padding-bottom: constant(safe-area-inset-bottom); }
         }
     </style>
 </head>
 <body>
+    <!-- 加载界面 -->
     <div class="loading-container" id="loadingBox">
         <div class="loading-spinner"></div>
         <p class="loading-text" id="loadingText">正在加载APP...</p>
-        <p class="loading-error" id="loadingError">加载失败，请检查网络后刷新</p>
+        <p class="loading-error" id="loadingError">加载失败，请点击重试</p>
     </div>
+
+    <!-- APP内容容器 -->
     <div id="app-content"></div>
 
     <script>
-        // 适配新Google Drive链接：替换为新文件夹ID
+        // ====================== 需替换的配置项 ======================
         const CONFIG = {
-            GOOGLE_DRIVE_FOLDER_ID: "1LcqjzsGWgyyafKHLt4ZLxrIRpe7akNea",
-            LOAD_CONFIG_FILE: "loadConfig.json",
+            // 1. loadConfig.json的直接下载链接
+            LOAD_CONFIG_URL: "https://drive.google.com/uc?export=download&id=1LU_nHmT87PiuuC2xAt8RFj1TJzPjo5Yx",
+            // 2. 跨域代理（无需修改）
             CORS_PROXY: "https://corsproxy.io/?"
         };
+        // ===========================================================
 
-        async function getGoogleDriveFileId(relativeFilePath) {
-            try {
-                const apiUrl = `${CONFIG.CORS_PROXY}https://www.googleapis.com/drive/v3/files?q='${CONFIG.GOOGLE_DRIVE_FOLDER_ID}'+in+parents+and+name='${relativeFilePath}'&fields=files(id)&key=AIzaSyB52jYkG9dZ9t5xXW4lG_2X6zU6Kp8Z2b0`;
-                const res = await fetch(apiUrl);
-                const data = await res.json();
-                if (!data.files || data.files.length === 0) throw new Error(`未找到文件：${relativeFilePath}`);
-                return data.files[0].id;
-            } catch (err) {
-                console.error("获取文件ID失败：", err);
-                throw err;
+        // 通用加载文件函数（带跨域代理）
+        async function loadFile(rawUrl) {
+            // 拼接跨域代理链接
+            const proxyUrl = `${CONFIG.CORS_PROXY}${rawUrl}`;
+            const res = await fetch(proxyUrl);
+            
+            // 校验响应状态
+            if (!res.ok) {
+                throw new Error(`文件加载失败（状态码：${res.status}）`);
             }
+            return res.text();
         }
 
-        async function getDownloadUrl(relativeFilePath) {
-            const fileId = await getGoogleDriveFileId(relativeFilePath);
-            return `${CONFIG.CORS_PROXY}https://drive.google.com/uc?export=download&id=${fileId}`;
-        }
-
-        async function loadJS(path) {
-            const url = await getDownloadUrl(path);
-            const res = await fetch(url);
-            if (!res.ok) throw new Error(`JS加载失败：${path}`);
-            const code = await res.text();
+        // 加载JS文件
+        async function loadJS(downloadUrl) {
+            const jsCode = await loadFile(downloadUrl);
             const script = document.createElement('script');
-            script.textContent = code;
+            script.textContent = jsCode;
             document.body.appendChild(script);
+            console.log("✅ JS加载完成：", downloadUrl);
         }
 
-        async function loadCSS(path) {
-            const url = await getDownloadUrl(path);
-            const res = await fetch(url);
-            if (!res.ok) throw new Error(`CSS加载失败：${path}`);
-            const code = await res.text();
+        // 加载CSS文件
+        async function loadCSS(downloadUrl) {
+            const cssCode = await loadFile(downloadUrl);
             const style = document.createElement('style');
-            style.textContent = code;
+            style.textContent = cssCode;
             document.head.appendChild(style);
+            console.log("✅ CSS加载完成：", downloadUrl);
         }
 
+        // 核心加载逻辑
         async function loadApp() {
             const loadingText = document.getElementById("loadingText");
             const loadingError = document.getElementById("loadingError");
+            
             try {
+                // 1. 加载配置文件
                 loadingText.textContent = "加载配置文件...";
-                const configUrl = await getDownloadUrl(CONFIG.LOAD_CONFIG_FILE);
-                const configRes = await fetch(configUrl);
-                const loadConfig = await configRes.json();
+                const configText = await loadFile(CONFIG.LOAD_CONFIG_URL);
+                const loadConfig = JSON.parse(configText);
 
+                // 2. 加载业务模型（entities）
                 loadingText.textContent = "加载核心逻辑...";
-                for (const file of loadConfig.entities) await loadJS(file);
+                if (loadConfig.entities && loadConfig.entities.length > 0) {
+                    for (const item of loadConfig.entities) {
+                        await loadJS(item.downloadUrl);
+                    }
+                }
 
+                // 3. 加载组件（components）
                 loadingText.textContent = "加载组件资源...";
-                for (const file of loadConfig.components) {
-                    file.endsWith(".css") ? await loadCSS(file) : await loadJS(file);
+                if (loadConfig.components && loadConfig.components.length > 0) {
+                    for (const item of loadConfig.components) {
+                        if (item.downloadUrl.endsWith(".css")) {
+                            await loadCSS(item.downloadUrl);
+                        } else {
+                            await loadJS(item.downloadUrl);
+                        }
+                    }
                 }
 
+                // 4. 加载页面（pages）
                 loadingText.textContent = "加载页面内容...";
-                for (const file of loadConfig.pages) {
-                    file.endsWith(".css") ? await loadCSS(file) : await loadJS(file);
+                if (loadConfig.pages && loadConfig.pages.length > 0) {
+                    for (const item of loadConfig.pages) {
+                        if (item.downloadUrl.endsWith(".css")) {
+                            await loadCSS(item.downloadUrl);
+                        } else {
+                            await loadJS(item.downloadUrl);
+                        }
+                    }
                 }
 
+                // 5. 加载完成，显示APP
                 loadingText.textContent = "启动成功！";
                 setTimeout(() => {
                     document.getElementById("loadingBox").style.display = "none";
                     document.getElementById("app-content").style.display = "block";
-                    if (window.initApp) window.initApp();
+                    // 触发APP初始化（如果你的代码中有initApp函数）
+                    if (window.initApp) {
+                        window.initApp();
+                    }
                 }, 800);
+
             } catch (err) {
+                // 加载失败处理
+                console.error("❌ 加载失败详情：", err);
                 loadingText.style.display = "none";
                 loadingError.style.display = "block";
-                loadingError.textContent = `加载失败：${err.message}`;
-                console.error("APP加载失败：", err);
             }
         }
 
-        window.addEventListener("DOMContentLoaded", loadApp);
-        document.getElementById("loadingError").addEventListener("click", () => {
-            document.getElementById("loadingError").style.display = "none";
-            document.getElementById("loadingText").style.display = "block";
-            document.getElementById("loadingText").textContent = "重新加载中...";
+        // 页面初始化
+        window.addEventListener("DOMContentLoaded", () => {
             loadApp();
+            // 失败后点击重试
+            document.getElementById("loadingError").addEventListener("click", () => {
+                document.getElementById("loadingError").style.display = "none";
+                document.getElementById("loadingText").style.display = "block";
+                document.getElementById("loadingText").textContent = "重新加载中...";
+                loadApp();
+            });
         });
     </script>
 </body>
