@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no,viewport-fit=cover">
-    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes"> <!-- 替换废弃标签 -->
     <meta name="apple-mobile-web-app-status-bar-style" content="black">
     <title>My APP (Web Version)</title>
     <style>
@@ -32,9 +32,6 @@
         .loading-text { font-size: 16px; color: #333; }
         .loading-error { color: #dc3545; margin-top: 10px; display: none; }
         #app-content { display: none; padding: 20px; width: 100%; height: 100vh; }
-        @supports (-webkit-touch-callout: none) {
-            .loading-container { padding-bottom: constant(safe-area-inset-bottom); }
-        }
     </style>
 </head>
 <body>
@@ -64,11 +61,24 @@
             return res.text();
         }
 
-        // Load JavaScript file (global mount mode)
+        // 专门加载JSON文件的函数（核心修复）
+        async function loadJSON(path, globalName) {
+            try {
+                const jsonText = await loadFile(path);
+                const jsonObj = JSON.parse(jsonText); // 解析JSON为对象
+                window[globalName] = jsonObj;
+                console.log(`✅ JSON mounted to global: window.${globalName} (${path})`);
+                return jsonObj;
+            } catch (err) {
+                console.error("❌ Failed to load JSON: ", path, err);
+                throw err;
+            }
+        }
+
+        // Load JavaScript file (仅用于.js文件)
         async function loadJS(path, globalName = null) {
             try {
                 const jsCode = await loadFile(path);
-                // Mount to window if globalName is provided
                 if (globalName) {
                     window[globalName] = eval(jsCode);
                     console.log(`✅ JS mounted to global: window.${globalName} (${path})`);
@@ -78,7 +88,7 @@
                     document.body.appendChild(script);
                     console.log("✅ JS loaded successfully: ", path);
                 }
-                return jsCode; // 返回代码，用于后续渲染
+                return jsCode;
             } catch (err) {
                 console.error("❌ Failed to load JS: ", path, err);
                 throw err;
@@ -98,25 +108,16 @@
         async function renderDefaultPage() {
             const appContent = document.getElementById("app-content");
             try {
-                // 1. 加载默认页面的JS代码
                 const pagePath = `MyAPP/pages/${CONFIG.DEFAULT_PAGE}`;
                 const pageCode = await loadJS(pagePath);
                 
-                // 2. 尝试执行页面渲染逻辑（适配两种常见场景）
-                // 场景1：页面代码有render()函数
                 if (window[CONFIG.DEFAULT_PAGE.replace(".js", "")]?.render) {
                     appContent.innerHTML = window[CONFIG.DEFAULT_PAGE.replace(".js", "")].render();
-                } 
-                // 场景2：页面代码直接生成HTML内容（挂载到全局）
-                else if (window.pageContent) {
+                } else if (window.pageContent) {
                     appContent.innerHTML = window.pageContent;
-                } 
-                // 场景3：兜底 - 执行页面代码后自动渲染
-                else {
-                    eval(pageCode); // 执行页面代码
-                    // 若页面代码内有主动插入DOM的逻辑，会自动生效
+                } else {
+                    eval(pageCode);
                 }
-
                 console.log(`✅ Default page rendered: ${CONFIG.DEFAULT_PAGE}`);
             } catch (err) {
                 appContent.innerHTML = `
@@ -135,7 +136,7 @@
             const loadingError = document.getElementById("loadingError");
             
             try {
-                // Step 1: Preload core entities (mount to window)
+                // Step 1: 用loadJSON加载实体文件（核心修复）
                 loadingText.textContent = "Loading core modules...";
                 const coreEntities = [
                    { path: "MyAPP/entities/Customer.json", globalName: "Customer" },
@@ -150,9 +151,8 @@
                     { path: "MyAPP/entities/TPA.json", globalName: "TPA" },
                     { path: "MyAPP/entities/TPABilling.json", globalName: "TPABilling" }
                 ];
-                // Load all core entities and mount to window
                 for (const item of coreEntities) {
-                    await loadJS(item.path, item.globalName);
+                    await loadJSON(item.path, item.globalName); // 用loadJSON而非loadJS
                 }
 
                 // Step 2: Load configuration file
@@ -160,12 +160,11 @@
                 const configText = await loadFile("loadConfig.json");
                 const loadConfig = JSON.parse(configText);
 
-                // Step 3: Load components (with subdirectories)
+                // Step 3: Load components
                 loadingText.textContent = "Loading component resources...";
                 if (loadConfig.components) {
                     for (const item of loadConfig.components) {
                         let componentPath = "";
-                        // Match component subdirectories
                         if (["CompactFlowConfig.js", "CompactTaskConfig.js", "FlowConfiguration.js", "ICCIDManager.js", "ModuleLibrary.js", "OrganizationManager.js", "ProgramManager.js", "RegionManager.js", "RoleManager.js", "RolePermissionManager.js", "TaskConfiguration.js", "UserPermissionManager.js"].includes(item.name)) {
                             componentPath = `MyAPP/components/config/${item.name}`;
                         } else if (["BulkEditCustomersModal.js", "CreateCustomerModal.js", "ExportCustomersModal.js", "ImportCustomersModal.js"].includes(item.name)) {
@@ -182,12 +181,11 @@
                     }
                 }
 
-                // Step 4: Load pages (including default page)
+                // Step 4: Load pages
                 loadingText.textContent = "Loading page content...";
                 if (loadConfig.pages) {
                     for (const item of loadConfig.pages) {
                         let pagePath = `MyAPP/pages/${item.name}`;
-                        // Fix CrmCustomer.js -> CrmCustomers.js
                         if (item.name === "CrmCustomer.js") {
                             pagePath = `MyAPP/pages/CrmCustomers.js`;
                         }
@@ -195,24 +193,19 @@
                     }
                 }
 
-                // Step 5: Complete loading & render default page
+                // Step 5: Render default page
                 loadingText.textContent = "Starting APP...";
                 setTimeout(async () => {
                     document.getElementById("loadingBox").style.display = "none";
                     const appContent = document.getElementById("app-content");
                     appContent.style.display = "block";
-                    
-                    // 渲染默认页面
                     await renderDefaultPage();
-
-                    // 触发initApp如果存在（兼容原有逻辑）
                     if (window.initApp) {
                         window.initApp();
                     }
                 }, 800);
 
             } catch (err) {
-                // Error handling
                 console.error("❌ Load failure details: ", err.stack);
                 loadingText.style.display = "none";
                 loadingError.style.display = "block";
