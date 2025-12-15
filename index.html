@@ -6,6 +6,17 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black">
     <title>My APP (Web Version)</title>
+
+    <!-- 引入React核心库（必须） -->
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    
+    <!-- 引入TailwindCSS（样式依赖） -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- 引入Lucide图标库（图标依赖） -->
+    <script src="https://unpkg.com/lucide@0.292.0/dist/umd/lucide.min.js"></script>
+
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: sans-serif; }
         body { background: #f5f5f5; min-height: 100vh; }
@@ -31,7 +42,21 @@
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         .loading-text { font-size: 16px; color: #333; }
         .loading-error { color: #dc3545; margin-top: 10px; display: none; }
-        #app-content { display: none; padding: 20px; width: 100%; height: 100vh; }
+        #app-content { display: none; padding: 0; width: 100%; height: 100vh; }
+        
+        /* Tabs组件基础样式 */
+        .tabs-list { display: flex; gap: 1px; margin-bottom: 16px; flex-wrap: wrap; }
+        .tabs-trigger { 
+            padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; 
+            cursor: pointer; background: #fff; font-size: 12px;
+        }
+        .tabs-trigger[data-state="active"] { 
+            background: #007bff; color: white; border-color: #007bff; 
+        }
+        .tabs-content { 
+            padding: 16px; border: 1px solid #ddd; border-radius: 4px;
+            background: #fff;
+        }
     </style>
 </head>
 <body>
@@ -82,7 +107,6 @@
                 
                 // 场景1：需要挂载到全局的JS
                 if (globalName) {
-                    // 动态导入模块，兼容import语法
                     const blob = new Blob([jsCode], { type: 'text/javascript' });
                     const url = URL.createObjectURL(blob);
                     const module = await import(url);
@@ -94,7 +118,7 @@
                 else {
                     const script = document.createElement('script');
                     script.textContent = jsCode;
-                    script.type = "module"; // 关键：启用ES Module
+                    script.type = "module";
                     script.crossOrigin = "anonymous";
                     document.body.appendChild(script);
                     console.log(`✅ JS module loaded: ${path}`);
@@ -115,45 +139,35 @@
             console.log(`✅ CSS loaded: ${path}`);
         }
 
-        // 渲染默认页面
+        // 渲染默认页面（适配React）
         async function renderDefaultPage() {
             const appContent = document.getElementById("app-content");
             try {
                 const pagePath = `MyAPP/pages/${CONFIG.DEFAULT_PAGE}`;
-                await loadJS(pagePath); // 加载默认页面（ES模块）
+                await loadJS(pagePath); // 加载React版本的ConfigCenter
 
-                // 尝试渲染（适配多种场景）
+                // 调用React渲染函数
                 const pageName = CONFIG.DEFAULT_PAGE.replace(".js", "");
                 if (window[pageName]?.render) {
-                    appContent.innerHTML = window[pageName].render();
-                } else if (window.pageContent) {
-                    appContent.innerHTML = window.pageContent;
+                    window[pageName].render();
                 } else {
-                    // 兜底显示已加载的实体数据
+                    // 兜底
                     appContent.innerHTML = `
-                        <div style="padding: 20px;">
-                            <h1>✅ APP Loaded Successfully</h1>
-                            <h3>Core Entities Loaded:</h3>
-                            <pre style="margin-top: 10px; padding: 10px; background: #f0f0f0; border-radius: 4px; max-height: 60vh; overflow-y: auto;">
-${JSON.stringify({
-    Customer: window.Customer?.name || "Loaded",
-    ICCID: window.ICCID?.name || "Loaded",
-    Organization: window.Organization?.name || "Loaded"
-}, null, 2)}
-                            </pre>
-                            <p style="margin-top: 10px; color: #666;">Tip: Add render() function to ${CONFIG.DEFAULT_PAGE} to show custom content</p>
+                        <div style="padding: 20px; text-align: center;">
+                            <h2>✅ ConfigCenter Loaded (React)</h2>
+                            <p>But no render function found</p>
                         </div>
                     `;
                 }
+                console.log(`✅ React page rendered: ${CONFIG.DEFAULT_PAGE}`);
             } catch (err) {
                 appContent.innerHTML = `
                     <div style="padding: 20px; text-align: center;">
                         <h2>❌ Failed to load ${CONFIG.DEFAULT_PAGE}</h2>
                         <p>Error: ${err.message}</p>
-                        <p style="margin-top: 10px; font-size: 12px; color: #999;">Check console for details</p>
                     </div>
                 `;
-                console.error("❌ Page render error: ", err);
+                console.error("❌ React page render error: ", err);
             }
         }
 
@@ -192,7 +206,6 @@ ${JSON.stringify({
                 if (loadConfig.components) {
                     for (const item of loadConfig.components) {
                         let componentPath = "";
-                        // 匹配components子目录
                         if (["CompactFlowConfig.js", "CompactTaskConfig.js", "FlowConfiguration.js", "ICCIDManager.js", "ModuleLibrary.js", "OrganizationManager.js", "ProgramManager.js", "RegionManager.js", "RoleManager.js", "RolePermissionManager.js", "TaskConfiguration.js", "UserPermissionManager.js"].includes(item.name)) {
                             componentPath = `MyAPP/components/config/${item.name}`;
                         } else if (["BulkEditCustomersModal.js", "CreateCustomerModal.js", "ExportCustomersModal.js", "ImportCustomersModal.js"].includes(item.name)) {
@@ -214,11 +227,9 @@ ${JSON.stringify({
                 if (loadConfig.pages) {
                     for (const item of loadConfig.pages) {
                         let pagePath = `MyAPP/pages/${item.name}`;
-                        // 修复文件名错误
                         if (item.name === "CrmCustomer.js") {
                             pagePath = `MyAPP/pages/CrmCustomers.js`;
                         }
-                        // 排除默认页面（已单独加载）
                         if (item.name !== CONFIG.DEFAULT_PAGE) {
                             await loadJS(pagePath);
                         }
@@ -231,18 +242,13 @@ ${JSON.stringify({
                     document.getElementById("loadingBox").style.display = "none";
                     const appContent = document.getElementById("app-content");
                     appContent.style.display = "block";
-                    
-                    // 渲染默认页面
                     await renderDefaultPage();
-
-                    // 触发自定义初始化函数
                     if (window.initApp) {
                         window.initApp();
                     }
                 }, 800);
 
             } catch (err) {
-                // 错误处理
                 console.error("❌ APP load error: ", err.stack);
                 loadingText.style.display = "none";
                 loadingError.style.display = "block";
