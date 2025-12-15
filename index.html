@@ -88,7 +88,7 @@
             try {
                 // Step 1: Load configuration file
                 loadingText.textContent = "Loading configuration file...";
-                const configText = await loadFile("MyAPP/loadConfig.json"); // Add MyAPP prefix
+                const configText = await loadFile("loadConfig.json"); // Add MyAPP prefix
                 const loadConfig = JSON.parse(configText);
 
                 // Step 2: Load core business logic (entities)
