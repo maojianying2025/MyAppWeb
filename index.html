@@ -46,40 +46,35 @@
     <div id="app-content"></div>
 
     <script>
+        // 配置：GitHub仓库的基础URL
         const CONFIG = {
-            // 你的loadConfig.json下载链接（已替换为正确ID）
-            LOAD_CONFIG_URL: "https://drive.google.com/uc?export=download&id=1LU_nHmT87PiuuC2xAt8RFj1TJzPjo5Yx",
-            // 改用更稳定的跨域代理
-            CORS_PROXY: "https://api.allorigins.win/raw?url="
+            BASE_URL: "https://maojianying2025.github.io/MyAppWeb" // 替换为你的GitHub Pages链接
         };
 
-        // 修复跨域代理的URL编码问题
-        async function loadFile(rawUrl) {
-            // 对原URL进行编码，避免代理解析错误
-            const encodedUrl = encodeURIComponent(rawUrl);
-            const proxyUrl = `${CONFIG.CORS_PROXY}${encodedUrl}`;
-            
-            const res = await fetch(proxyUrl);
+        // 加载文件（直接从GitHub仓库加载，无跨域问题）
+        async function loadFile(path) {
+            const url = `${CONFIG.BASE_URL}/${path}`;
+            const res = await fetch(url);
             if (!res.ok) {
-                throw new Error(`文件加载失败：${res.status} ${res.statusText}（URL：${proxyUrl}）`);
+                throw new Error(`文件加载失败：${res.status}（URL：${url}）`);
             }
             return res.text();
         }
 
-        async function loadJS(downloadUrl) {
-            const jsCode = await loadFile(downloadUrl);
+        async function loadJS(path) {
+            const jsCode = await loadFile(path);
             const script = document.createElement('script');
             script.textContent = jsCode;
             document.body.appendChild(script);
-            console.log("✅ JS加载完成：", downloadUrl);
+            console.log("✅ JS加载完成：", path);
         }
 
-        async function loadCSS(downloadUrl) {
-            const cssCode = await loadFile(downloadUrl);
+        async function loadCSS(path) {
+            const cssCode = await loadFile(path);
             const style = document.createElement('style');
             style.textContent = cssCode;
             document.head.appendChild(style);
-            console.log("✅ CSS加载完成：", downloadUrl);
+            console.log("✅ CSS加载完成：", path);
         }
 
         async function loadApp() {
@@ -88,26 +83,22 @@
             
             try {
                 loadingText.textContent = "加载配置文件...";
-                const configText = await loadFile(CONFIG.LOAD_CONFIG_URL);
-                console.log("🔍 配置文件内容：", configText); // 打印内容，检查是否正确
-                
-                // 解析JSON前先清理可能的BOM头
-                const cleanConfigText = configText.replace(/^\uFEFF/, '');
-                const loadConfig = JSON.parse(cleanConfigText);
+                const configText = await loadFile("loadConfig.json");
+                const loadConfig = JSON.parse(configText);
 
                 loadingText.textContent = "加载核心逻辑...";
                 for (const item of loadConfig.entities || []) {
-                    await loadJS(item.downloadUrl);
+                    await loadJS(`entities/${item.name}`);
                 }
 
                 loadingText.textContent = "加载组件资源...";
                 for (const item of loadConfig.components || []) {
-                    item.downloadUrl.endsWith(".css") ? await loadCSS(item.downloadUrl) : await loadJS(item.downloadUrl);
+                    await loadJS(`components/${item.name}`);
                 }
 
                 loadingText.textContent = "加载页面内容...";
                 for (const item of loadConfig.pages || []) {
-                    item.downloadUrl.endsWith(".css") ? await loadCSS(item.downloadUrl) : await loadJS(item.downloadUrl);
+                    await loadJS(`pages/${item.name}`);
                 }
 
                 loadingText.textContent = "启动成功！";

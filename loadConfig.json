@@ -1,0 +1,47 @@
+{
+  "entities": [
+    {"name": "Customer.js"},
+    {"name": "ICCID.js"},
+    {"name": "Organization.js"},
+    {"name": "Permission.js"},
+    {"name": "Program.js"},
+    {"name": "Region.js"},
+    {"name": "Role.js"},
+    {"name": "SalesSchedule.js"},
+    {"name": "Task.js"},
+    {"name": "TPA.js"},
+    {"name": "TPABilling.js"}
+  ],
+  "components": [
+    {"name": "CompactFlowConfig.js"},
+    {"name": "CompactTaskConfig.js"},
+    {"name": "FlowConfiguration.js"},
+    {"name": "ICCIDManager.js"},
+    {"name": "ModuleLibrary.js"},
+    {"name": "OrganizationManager.js"},
+    {"name": "ProgramManager.js"},
+    {"name": "RegionManager.js"},
+    {"name": "RoleManager.js"},
+    {"name": "RolePermissionManager.js"},
+    {"name": "TaskConfiguration.js"},
+    {"name": "UserPermissionManager.js"},
+    {"name": "BulkEditCustomersModal.js"},
+    {"name": "CreateCustomerModal.js"},
+    {"name": "ExportCustomersModal.js"},
+    {"name": "ImportCustomersModal.js"},
+    {"name": "CalenderModal.js"},
+    {"name": "CalenderWidget.js"},
+    {"name": "TPAForm.js"}
+  ],
+  "pages": [
+    {"name": "ConfigCenter.js"},
+    {"name": "CrmCustomer.js"},
+    {"name": "CustomerDetail.js"},
+    {"name": "MyTeam.js"},
+    {"name": "Profile.js"},
+    {"name": "Support.js"},
+    {"name": "TPABilling.js"},
+    {"name": "TPAManagement.js"},
+    {"name": "Tasks.js"}
+  ]
+}
