@@ -138,17 +138,17 @@
                 // Step 1: Preload core entities (mount to window)
                 loadingText.textContent = "Loading core modules...";
                 const coreEntities = [
-                    { path: "MyAPP/entities/Customer.js", globalName: "Customer" },
-                    { path: "MyAPP/entities/ICCID.js", globalName: "ICCID" },
-                    { path: "MyAPP/entities/Organization.js", globalName: "Organization" },
-                    { path: "MyAPP/entities/Permission.js", globalName: "Permission" },
-                    { path: "MyAPP/entities/Program.js", globalName: "Program" },
-                    { path: "MyAPP/entities/Region.js", globalName: "Region" },
-                    { path: "MyAPP/entities/Role.js", globalName: "Role" },
-                    { path: "MyAPP/entities/SalesSchedule.js", globalName: "SalesSchedule" },
-                    { path: "MyAPP/entities/Task.js", globalName: "Task" },
-                    { path: "MyAPP/entities/TPA.js", globalName: "TPA" },
-                    { path: "MyAPP/entities/TPABilling.js", globalName: "TPABilling" }
+                   { path: "MyAPP/entities/Customer.json", globalName: "Customer" },
+                    { path: "MyAPP/entities/ICCID.json", globalName: "ICCID" },
+                    { path: "MyAPP/entities/Organization.json", globalName: "Organization" },
+                    { path: "MyAPP/entities/Permission.json", globalName: "Permission" },
+                    { path: "MyAPP/entities/Program.json", globalName: "Program" },
+                    { path: "MyAPP/entities/Region.json", globalName: "Region" },
+                    { path: "MyAPP/entities/Role.json", globalName: "Role" },
+                    { path: "MyAPP/entities/SalesSchedule.json", globalName: "SalesSchedule" },
+                    { path: "MyAPP/entities/Task.json", globalName: "Task" },
+                    { path: "MyAPP/entities/TPA.json", globalName: "TPA" },
+                    { path: "MyAPP/entities/TPABilling.json", globalName: "TPABilling" }
                 ];
                 // Load all core entities and mount to window
                 for (const item of coreEntities) {
