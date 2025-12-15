@@ -93,3 +93,8 @@ window.CommonComponents = (() => {
 
 // 全局挂载React快捷创建元素（简化代码）
 window.$r = React.createElement;
+// 在CommonComponents.js末尾添加
+window.MODULE_LIBRARY = [
+  { id: "module1", name: "Basic Info", icon: "UserCircle" },
+  { id: "module2", name: "Schedule", icon: "Calendar" }
+];
