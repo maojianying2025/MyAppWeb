@@ -1,16 +1,16 @@
 {
   "entities": [
-    {"name": "Customer.js"},
-    {"name": "ICCID.js"},
-    {"name": "Organization.js"},
-    {"name": "Permission.js"},
-    {"name": "Program.js"},
-    {"name": "Region.js"},
-    {"name": "Role.js"},
-    {"name": "SalesSchedule.js"},
-    {"name": "Task.js"},
-    {"name": "TPA.js"},
-    {"name": "TPABilling.js"}
+   {"name": "Customer.json"},
+    {"name": "ICCID.json"},
+    {"name": "Organization.json"},
+    {"name": "Permission.json"},
+    {"name": "Program.json"},
+    {"name": "Region.json"},
+    {"name": "Role.json"},
+    {"name": "SalesSchedule.json"},
+    {"name": "Task.json"},
+    {"name": "TPA.json"},
+    {"name": "TPABilling.json"}
   ],
   "components": [
     {"name": "CompactFlowConfig.js"},
